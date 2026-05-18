@@ -3,8 +3,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Plugins/PassPlugin.h"
-
+#if LLVM_VERSION_MAJOR>=21
+  #include "llvm/Plugins/PassPlugin.h"
+#else
+  #include "llvm/Passes/PassPlugin.h"
+#endif
 // Remember to compile with `g -fno-discard-value-names` to get names (of the
 // BB) and line values (for the src)
 
