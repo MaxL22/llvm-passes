@@ -15,4 +15,4 @@ logger.o: logger.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f indirDump.so logger.o
+	rm -f indir-dump.so logger.o
