@@ -46,8 +46,6 @@ struct indirDump : public PassInfoMixin<indirDump> {
         FunctionType::get(VoidTy, {PtrTy, Int32Ty, IntptrTy}, false);
     FunctionCallee LogFunc = M.getOrInsertFunction("__log_indir", LogFuncTy);
 
-    bool Modified = false;
-
     // Classic iter
     for (Function &F : M) {
       // Skips external function declarations
@@ -90,14 +88,13 @@ struct indirDump : public PassInfoMixin<indirDump> {
 
             Value *SrcLineVal = ConstantInt::get(Int32Ty, LineNum);
             IRB.CreateCall(LogFunc, {SrcInfo, SrcLineVal, TargetAddrInt});
-            Modified = true;
           }
         }
       }
     }
 
     // Return `none()` if modified, `all()` otherwise
-    return Modified ? PreservedAnalyses::none() : PreservedAnalyses::all();
+    return PreservedAnalyses::none();
   }
 };
 
