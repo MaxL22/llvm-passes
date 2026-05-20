@@ -9,15 +9,15 @@ static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
 static FILE *log_file = NULL;
 
 void close_logger(void) {
-    pthread_mutex_lock(&log_mutex);
-    if (log_file) {
-        fclose(log_file);
-        log_file = NULL;
-    }
-    pthread_mutex_unlock(&log_mutex);
+  pthread_mutex_lock(&log_mutex);
+  if (log_file) {
+    fclose(log_file);
+    log_file = NULL;
+  }
+  pthread_mutex_unlock(&log_mutex);
 }
 
-void __log_indir(const char *src_info, uint32_t src_line, uintptr_t dst_addr) {
+void __log_indir(const char *src_info, uintptr_t dst_addr) {
   pthread_mutex_lock(&log_mutex);
 
   if (!log_file) {
@@ -27,7 +27,7 @@ void __log_indir(const char *src_info, uint32_t src_line, uintptr_t dst_addr) {
   }
 
   if (log_file) {
-    fprintf(log_file, "Source: %s:%u -> Dest: 0x%lx\n", src_info, src_line,
+    fprintf(log_file, "Source: %s -> Dest: 0x%lx\n", src_info,
             (unsigned long)dst_addr);
     fflush(log_file);
   }

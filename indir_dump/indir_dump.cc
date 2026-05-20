@@ -1,12 +1,13 @@
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
-#if LLVM_VERSION_MAJOR>=21
-  #include "llvm/Plugins/PassPlugin.h"
+#if LLVM_VERSION_MAJOR >= 21
+#include "llvm/Plugins/PassPlugin.h"
 #else
-  #include "llvm/Passes/PassPlugin.h"
+#include "llvm/Passes/PassPlugin.h"
 #endif
 // Remember to compile with `g -fno-discard-value-names` to get names (of the
 // BB) and line values (for the src)
@@ -14,6 +15,29 @@
 using namespace llvm;
 
 namespace {
+
+std::string getStableLocation(const Instruction &I) {
+  const DebugLoc &Loc = I.getDebugLoc();
+  // If no debug info
+  if (!Loc) {
+    return "UNKNOWN_FILE:0";
+  }
+
+  DILocation *DILoc = Loc.get();
+  // Get root call site, no inlining
+  while (DILoc->getInlinedAt()) {
+    DILoc = DILoc->getInlinedAt();
+  }
+
+  // Extract base filename ("ldo.c" from "/src/lua/ldo.c")
+  std::string Filename = DILoc->getFilename().str();
+  size_t SlashIdx = Filename.find_last_of('/');
+  if (SlashIdx != std::string::npos) {
+    Filename = Filename.substr(SlashIdx + 1);
+  }
+
+  return Filename + ":" + std::to_string(DILoc->getLine());
+}
 
 struct indirDump : public PassInfoMixin<indirDump> {
 
@@ -40,10 +64,9 @@ struct indirDump : public PassInfoMixin<indirDump> {
     Type *IntptrTy = DL.getIntPtrType(Ctx);
     Type *VoidTy = Type::getVoidTy(Ctx);
     PointerType *PtrTy = PointerType::getUnqual(Ctx);
-    Type *Int32Ty = Type::getInt32Ty(Ctx);
 
     FunctionType *LogFuncTy =
-        FunctionType::get(VoidTy, {PtrTy, Int32Ty, IntptrTy}, false);
+        FunctionType::get(VoidTy, {PtrTy, IntptrTy}, false);
     FunctionCallee LogFunc = M.getOrInsertFunction("__log_indir", LogFuncTy);
 
     // Classic iter
@@ -76,18 +99,12 @@ struct indirDump : public PassInfoMixin<indirDump> {
           }
 
           if (TargetAddrInt) {
-            std::string SrcInfoStr =
-                F.getName().str() + "::" + BB.getName().str();
+            std::string SrcInfoStr = getStableLocation(I);
 
             // Inject call
             Value *SrcInfo = IRB.CreateGlobalString(SrcInfoStr, "src_info");
-            unsigned LineNum = 0;
-            if (const DebugLoc &Loc = I.getDebugLoc()) {
-              LineNum = Loc.getLine();
-            }
 
-            Value *SrcLineVal = ConstantInt::get(Int32Ty, LineNum);
-            IRB.CreateCall(LogFunc, {SrcInfo, SrcLineVal, TargetAddrInt});
+            IRB.CreateCall(LogFunc, {SrcInfo, TargetAddrInt});
           }
         }
       }
