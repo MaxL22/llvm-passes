@@ -133,8 +133,8 @@ llvmGetPassPluginInfo() {
                   return false;
                 });
             // Pipeline support
-            PB.registerPipelineStartEPCallback(
-                [](ModulePassManager &MPM, OptimizationLevel Level) {
+            PB.registerOptimizerLastEPCallback(
+                [](ModulePassManager &MPM, OptimizationLevel Level, ThinOrFullLTOPhase Phase) {
                   MPM.addPass(indirDump());
                 });
           }};
