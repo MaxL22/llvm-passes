@@ -4,6 +4,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #if LLVM_VERSION_MAJOR >= 21
 #include "llvm/Plugins/PassPlugin.h"
 #else
@@ -15,6 +17,20 @@
 using namespace llvm;
 
 namespace {
+
+// Dump to file, compile time
+void dumpAtCompileTime(const std::string &SrcInfo) {
+  std::error_code EC;
+  // Always append mode, make sure it's empty at the start
+  raw_fd_ostream DumpFile("/tmp/indir_locs_comptime.txt", EC, sys::fs::OF_Append);
+
+  if (!EC) {
+    DumpFile << SrcInfo << "\n";
+  } else {
+    errs() << "Warning: Could not open compile_time_indir_dump.txt: "
+           << EC.message() << "\n";
+  }
+}
 
 std::string getStableLocation(const Instruction &I) {
   const DebugLoc &Loc = I.getDebugLoc();
@@ -101,9 +117,11 @@ struct indirDump : public PassInfoMixin<indirDump> {
           if (TargetAddrInt) {
             std::string SrcInfoStr = getStableLocation(I);
 
+            // Write to file
+            dumpAtCompileTime(SrcInfoStr);
+
             // Inject call
             Value *SrcInfo = IRB.CreateGlobalString(SrcInfoStr, "src_info");
-
             IRB.CreateCall(LogFunc, {SrcInfo, TargetAddrInt});
           }
         }
@@ -134,8 +152,7 @@ llvmGetPassPluginInfo() {
                 });
             // Pipeline support
             PB.registerOptimizerLastEPCallback(
-                [](ModulePassManager &MPM, OptimizationLevel Level, ThinOrFullLTOPhase Phase) {
-                  MPM.addPass(indirDump());
-                });
+                [](ModulePassManager &MPM, OptimizationLevel Level,
+                   ThinOrFullLTOPhase Phase) { MPM.addPass(indirDump()); });
           }};
 }
