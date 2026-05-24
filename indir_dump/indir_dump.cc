@@ -22,7 +22,8 @@ namespace {
 void dumpAtCompileTime(const std::string &SrcInfo) {
   std::error_code EC;
   // Always append mode, make sure it's empty at the start
-  raw_fd_ostream DumpFile("/tmp/indir_locs_comptime.txt", EC, sys::fs::OF_Append);
+  raw_fd_ostream DumpFile("/tmp/indir_locs_comptime.txt", EC,
+                          sys::fs::OF_Append);
 
   if (!EC) {
     DumpFile << SrcInfo << "\n";

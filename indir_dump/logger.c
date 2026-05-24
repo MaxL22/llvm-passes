@@ -3,6 +3,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Compile with `-pthread`
 
 static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -34,3 +38,7 @@ void __log_indir(const char *src_info, uintptr_t dst_addr) {
 
   pthread_mutex_unlock(&log_mutex);
 }
+
+#ifdef __cplusplus
+}
+#endif
